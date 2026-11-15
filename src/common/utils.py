@@ -32,7 +32,7 @@ def run_if_disabled(message=''):
             if not config.enabled:
                 return function(*args, **kwargs)
             elif message:
-                print(message)
+                report_error(message.replace('[!]', '').strip())
         return helper
     return decorator
 

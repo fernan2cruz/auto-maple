@@ -1,4 +1,5 @@
 import tkinter as tk
+from tkinter.messagebox import askyesno
 from src.common import config
 from src.gui.interfaces import Frame
 
@@ -68,6 +69,9 @@ class Controls(Frame):
             p_index = int(components[0])
             if len(commands) > 0:
                 c_index = int(commands[0])
+                command = config.routine[p_index].commands[c_index]
+                if not askyesno(title='Delete Command', message=f"Delete command '{command.id}'?"):
+                    return
                 config.routine.delete_command(p_index, c_index)
 
                 edit = self.parent.parent
@@ -76,6 +80,13 @@ class Controls(Frame):
                 edit.editor.create_edit_ui(config.routine.sequence, p_index,
                                            edit.routine.components.update_obj)
             else:
+                component = config.routine[p_index]
+                name = component.__class__.__name__
+                extra = ''
+                if getattr(component, 'commands', None):
+                    extra = f' and its {len(component.commands)} command(s)'
+                if not askyesno(title=f'Delete {name}', message=f'Delete this {name}{extra}?\n\n{str(component).strip()}'):
+                    return
                 config.routine.delete_component(p_index)
 
                 edit = self.parent.parent
