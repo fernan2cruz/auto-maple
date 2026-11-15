@@ -215,7 +215,7 @@ class Bot(Configurable):
                 print(f" -  Found submodule '{path}' (use the Update menu to update it)")
                 continue
             try:
-                git.Git('.').clone(url, path)
+                git.Git('.').clone('--', url, path)
                 print(f" -  Initialized submodule '{path}'")
             except git.exc.GitCommandError as e:
                 utils.report_error(f"Could not download submodule '{path}': {e}")
@@ -234,7 +234,7 @@ class Bot(Configurable):
             self.submodules.append(path)
             if not (os.path.isdir(path) and os.listdir(path)):
                 try:
-                    git.Git('.').clone(url, path)       # First time loading submodule
+                    git.Git('.').clone('--', url, path)     # First time loading submodule
                     print(f" -  Initialized submodule '{path}'")
                 except git.exc.GitCommandError as e:
                     utils.report_error(f"Could not download submodule '{path}': {e}")
@@ -242,9 +242,13 @@ class Bot(Configurable):
 
             sub_repo = git.Repo(path)
             keep_changes = not force and sub_repo.is_dirty()
+            try:
+                sub_repo.git.fetch('origin', 'main')        # Fetch first: nothing changes if offline
+            except git.exc.GitCommandError as e:
+                utils.report_error(f"Could not update submodule '{path}': {e}")
+                continue
             if keep_changes:
                 sub_repo.git.stash('push', '-m', 'auto-maple update')
-            sub_repo.git.fetch('origin', 'main')
             sub_repo.git.reset('--hard', 'FETCH_HEAD')
             if force:
                 print(f" -  Rebuilt submodule '{path}'")
