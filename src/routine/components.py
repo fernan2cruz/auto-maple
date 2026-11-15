@@ -108,11 +108,10 @@ class Label(Component):
 
     def __init__(self, label):
         super().__init__(locals())
-        self.label = str(label)
-        if self.label in config.routine.labels:
-            raise ValueError
-        self.links = set()
-        self.index = None
+        self.label = str(label).strip()
+        if not self.label:
+            raise ValueError('Label name cannot be empty.')
+        self.index = None       # Kept up to date by Routine.relink()
 
     def set_index(self, i):
         self.index = i
@@ -124,10 +123,6 @@ class Label(Component):
         curr = super().info()
         curr['vars']['index'] = self.index
         return curr
-
-    def __delete__(self, instance):
-        del self.links
-        config.routine.labels.pop(self.label)
 
     def __str__(self):
         return f'{self.label}:'
@@ -146,7 +141,7 @@ class Jump(Component):
         self.link = None
 
     def main(self):
-        if self.link is None:
+        if self.link is None or self.link.index is None:
             print(f"\n[!] Label '{self.label}' does not exist.")
         else:
             if self.counter == 0:
@@ -157,22 +152,18 @@ class Jump(Component):
     def _increment_counter(self):
         self.counter = (self.counter + 1) % self.frequency
 
-    def bind(self):
+    def bind(self, labels=None):
         """
-        Binds this Goto to its corresponding Label. If the Label's index changes, this Goto
-        instance will automatically be able to access the updated value.
-        :return:    Whether the binding was successful
+        Binds this Jump to its corresponding Label. The Label's index is kept up to date by
+        Routine.relink(), so this Jump always reads the current value.
+        :param labels:  Mapping of label names to Labels, defaults to the current routine's.
+        :return:        Whether the binding was successful
         """
 
-        if self.label in config.routine.labels:
-            self.link = config.routine.labels[self.label]
-            self.link.links.add(self)
-            return True
-        return False
-
-    def __delete__(self, instance):
-        if self.link is not None:
-            self.link.links.remove(self)
+        if labels is None:
+            labels = config.routine.labels
+        self.link = labels.get(self.label)
+        return self.link is not None
 
     def __str__(self):
         return f'  > {self.label}'

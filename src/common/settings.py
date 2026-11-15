@@ -7,16 +7,20 @@ of validator functions that can be used to enforce parameter types.
 #################################
 #      Validator Functions      #
 #################################
-def validate_nonnegative_int(value):
+def validate_positive_int(value):
     """
-    Checks whether VALUE can be a valid non-negative integer.
+    Checks whether VALUE can be a valid positive integer (1 or greater).
     :param value:   The string to check.
     :return:        VALUE as an integer.
     """
 
     if int(value) >= 1:
         return int(value)
-    raise ValueError(f"'{value}' is not a valid non-negative integer.")
+    raise ValueError(f"'{value}' is not a valid positive integer (must be 1 or greater).")
+
+
+# Backwards-compatible alias: command books in auto-maple-resources use the old name.
+validate_nonnegative_int = validate_positive_int
 
 
 def validate_boolean(value):
@@ -26,7 +30,7 @@ def validate_boolean(value):
     :return:        VALUE as a boolean
     """
 
-    value = value.lower()
+    value = str(value).strip().lower()
     if value in {'true', 'false'}:
         return True if value == 'true' else False
     elif int(value) in {0, 1}:

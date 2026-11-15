@@ -90,12 +90,17 @@ class Bot(Configurable):
                     press(self.config['Feed pet'], 1)
                     last_fed = now
 
-                # Highlight the current Point
-                config.gui.view.routine.select(config.routine.index)
-                config.gui.view.details.display_info(config.routine.index)
-
                 # Execute next Point in the routine
-                element = config.routine[config.routine.index]
+                with config.routine.lock:
+                    element = config.routine.current()
+                    index = config.routine.index
+                if element is None:
+                    continue
+
+                # Highlight the current Point
+                utils.gui_call(config.gui.view.routine.select, index)
+                utils.gui_call(config.gui.view.details.display_info, index)
+
                 if self.rune_active and isinstance(element, Point) \
                         and element.location == self.rune_closest_pos:
                     self._solve_rune(model)

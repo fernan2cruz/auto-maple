@@ -39,6 +39,43 @@ def run_if_disabled(message=''):
     return decorator
 
 
+def gui_call(func, *args, **kwargs):
+    """
+    Schedules FUNC to run on the Tk main thread. Tkinter is not thread-safe, so every
+    widget update coming from a worker thread must go through this function.
+    Does nothing if the GUI has not been created yet.
+    """
+
+    gui = config.gui
+    if gui is None:
+        return
+    post = getattr(gui, 'post', None)
+    if post is None:
+        func(*args, **kwargs)
+    else:
+        post(func, *args, **kwargs)
+
+
+def report_error(message):
+    """Prints MESSAGE to the console and shows it in the GUI's status bar."""
+
+    print(f'\n[!] {message}')
+    _show_message(message, 'error')
+
+
+def report_info(message):
+    """Prints MESSAGE to the console and shows it in the GUI's status bar."""
+
+    print(f'\n[~] {message}')
+    _show_message(message, 'info')
+
+
+def _show_message(message, level):
+    gui = config.gui
+    if gui is not None and hasattr(gui, 'show_message'):
+        gui_call(gui.show_message, message, level)
+
+
 def distance(a, b):
     """
     Applies the distance formula to two points.
