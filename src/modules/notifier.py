@@ -62,8 +62,12 @@ class Notifier:
         while True:
             if config.enabled:
                 frame = config.capture.frame
+                capture_info = config.capture.minimap
+                if frame is None or not capture_info:     # Capture not calibrated yet
+                    time.sleep(0.05)
+                    continue
                 height, width, _ = frame.shape
-                minimap = config.capture.minimap['minimap']
+                minimap = capture_info['minimap']
 
                 # Check for unexpected black screen
                 gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)

@@ -27,8 +27,7 @@ listener = Listener()
 bot.start()
 wait_until_ready(bot, 'The main bot loop')
 
-capture.start()
-wait_until_ready(capture, 'Video capture')
+capture.start()      # Not awaited: the GUI opens even before the game window is found
 
 notifier.start()
 wait_until_ready(notifier, 'The notifier')

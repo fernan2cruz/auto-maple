@@ -73,8 +73,9 @@ class Listener(Configurable):
 
         config.bot.rune_active = False
 
-        if not config.enabled:
-            Listener.recalibrate_minimap()      # Recalibrate only when being enabled.
+        if not config.enabled and not Listener.recalibrate_minimap():   # Recalibrate only when being enabled
+            winsound.Beep(523, 333)     # C5: stays stopped
+            return
 
         config.enabled = not config.enabled
         utils.print_state()
