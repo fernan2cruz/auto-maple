@@ -25,6 +25,8 @@ class Routine(LabelFrame):
         self.scroll.config(command=self.listbox.yview)
 
     def select(self, i):
+        if not 0 <= i < self.listbox.size():
+            return
         self.listbox.selection_clear(0, 'end')
         self.listbox.selection_set(i)
         self.listbox.see(i)

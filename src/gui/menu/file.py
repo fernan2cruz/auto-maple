@@ -13,19 +13,19 @@ class File(MenuBarItem):
 
         self.add_command(
             label='New Routine',
-            command=utils.async_callback(self, File._new_routine),
+            command=File._new_routine,
             state=tk.DISABLED
         )
         self.add_command(
             label='Save Routine',
-            command=utils.async_callback(self, File._save_routine),
+            command=File._save_routine,
             state=tk.DISABLED
         )
         self.add_separator()
-        self.add_command(label='Load Command Book', command=utils.async_callback(self, File._load_commands))
+        self.add_command(label='Load Command Book', command=File._load_commands)
         self.add_command(
             label='Load Routine',
-            command=utils.async_callback(self, File._load_routine),
+            command=File._load_routine,
             state=tk.DISABLED
         )
 

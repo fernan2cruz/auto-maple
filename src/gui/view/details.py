@@ -41,6 +41,10 @@ class Details(LabelFrame):
     def display_info(self, index):
         """Updates the Details section to show info about the Component at position INDEX."""
 
+        if not 0 <= index < len(config.routine):
+            self.clear_info()
+            return
+
         self.text.config(state=tk.NORMAL)
 
         info = config.routine[index].info()

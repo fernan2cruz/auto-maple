@@ -1,9 +1,7 @@
 """A collection of functions and classes used across multiple modules."""
 
 import math
-import queue
 import cv2
-import threading
 import numpy as np
 from src.common import config, settings
 from random import random
@@ -271,36 +269,3 @@ def rand_float(start, end):
     assert start < end, 'START must be less than END'
     return (end - start) * random() + start
 
-
-##########################
-#       Threading        #
-##########################
-class Async(threading.Thread):
-    def __init__(self, function, *args, **kwargs):
-        super().__init__()
-        self.queue = queue.Queue()
-        self.function = function
-        self.args = args
-        self.kwargs = kwargs
-
-    def run(self):
-        self.function(*self.args, **self.kwargs)
-        self.queue.put('x')
-
-    def process_queue(self, root):
-        def f():
-            try:
-                self.queue.get_nowait()
-            except queue.Empty:
-                root.after(100, self.process_queue(root))
-        return f
-
-
-def async_callback(context, function, *args, **kwargs):
-    """Returns a callback function that can be run asynchronously by the GUI."""
-
-    def f():
-        task = Async(function, *args, **kwargs)
-        task.start()
-        context.after(100, task.process_queue(context))
-    return f

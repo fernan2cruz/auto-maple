@@ -90,9 +90,9 @@ class Bot(Configurable):
             if config.enabled and len(config.routine) > 0:
                 # Buff and feed pets
                 self.command_book.buff.main()
-                pet_settings = config.gui.settings.pets
-                auto_feed = pet_settings.auto_feed.get()
-                num_pets = pet_settings.num_pets.get()
+                pet_settings = config.gui.settings.pets.pet_settings
+                auto_feed = pet_settings.get('Auto-feed')
+                num_pets = max(1, int(pet_settings.get('Num pets') or 1))
                 now = time.time()
                 if auto_feed and now - last_fed > 1200 / num_pets:
                     press(self.config['Feed pet'], 1)
@@ -177,77 +177,6 @@ class Bot(Configurable):
         utils.gui_call(config.gui.settings.update_class_bindings)
         utils.report_info(f"Loaded command book '{self.command_book.name}'.")
         return True
-        #
-        # utils.print_separator()
-        # print(f"[~] Loading command book '{basename(file)}':")
-        #
-        # ext = splitext(file)[1]
-        # if ext != '.py':
-        #     print(f" !  '{ext}' is not a supported file extension.")
-        #     return False
-        #
-        # new_step = components.step
-        # new_cb = {}
-        # for c in (components.Wait, components.Walk, components.Fall):
-        #     new_cb[c.__name__.lower()] = c
-        #
-        # # Import the desired command book file
-        # module_name = splitext(basename(file))[0]
-        # target = '.'.join(['resources', 'command_books', module_name])
-        # try:
-        #     module = importlib.import_module(target)
-        #     module = importlib.reload(module)
-        # except ImportError:     # Display errors in the target Command Book
-        #     print(' !  Errors during compilation:\n')
-        #     for line in traceback.format_exc().split('\n'):
-        #         line = line.rstrip()
-        #         if line:
-        #             print(' ' * 4 + line)
-        #     print(f"\n !  Command book '{module_name}' was not loaded")
-        #     return
-        #
-        # # Check if the 'step' function has been implemented
-        # step_found = False
-        # for name, func in inspect.getmembers(module, inspect.isfunction):
-        #     if name.lower() == 'step':
-        #         step_found = True
-        #         new_step = func
-        #
-        # # Populate the new command book
-        # for name, command in inspect.getmembers(module, inspect.isclass):
-        #     new_cb[name.lower()] = command
-        #
-        # # Check if required commands have been implemented and overridden
-        # required_found = True
-        # for command in [components.Buff]:
-        #     name = command.__name__.lower()
-        #     if name not in new_cb:
-        #         required_found = False
-        #         new_cb[name] = command
-        #         print(f" !  Error: Must implement required command '{name}'.")
-        #
-        # # Look for overridden movement commands
-        # movement_found = True
-        # for command in (components.Move, components.Adjust):
-        #     name = command.__name__.lower()
-        #     if name not in new_cb:
-        #         movement_found = False
-        #         new_cb[name] = command
-        #
-        # if not step_found and not movement_found:
-        #     print(f" !  Error: Must either implement both 'Move' and 'Adjust' commands, "
-        #           f"or the function 'step'")
-        # if required_found and (step_found or movement_found):
-        #     self.module_name = module_name
-        #     self.command_book = new_cb
-        #     self.buff = new_cb['buff']()
-        #     components.step = new_step
-        #     config.gui.menu.file.enable_routine_state()
-        #     config.gui.view.status.set_cb(basename(file))
-        #     config.routine.clear()
-        #     print(f" ~  Successfully loaded command book '{module_name}'")
-        # else:
-        #     print(f" !  Command book '{module_name}' was not loaded")
 
     def update_submodules(self, force=False):
         """

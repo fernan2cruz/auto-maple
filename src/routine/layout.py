@@ -84,6 +84,8 @@ class Layout:
         :return:    None
         """
 
+        self.changed = True
+
         def add_helper(node):
             if not node:
                 return Node(x, y)
@@ -287,6 +289,7 @@ class Layout:
         layouts_dir = get_layouts_dir()
         if not os.path.exists(layouts_dir):
             os.makedirs(layouts_dir)
+        self.changed = False
         with open(join(layouts_dir, self.name), 'wb') as file:
             pickle.dump(self, file)
 

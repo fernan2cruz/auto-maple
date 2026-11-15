@@ -54,7 +54,7 @@ class Minimap(LabelFrame):
                     cv2.line(img, start, end, (0, 255, 255), 1)
 
             # Draw each Point in the routine as a circle
-            for p in config.routine.sequence:
+            for p in list(config.routine.sequence):
                 if isinstance(p, Point):
                     utils.draw_location(img,
                                         p.location,
