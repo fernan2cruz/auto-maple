@@ -20,14 +20,17 @@ Assumption: pickle stays as the on-disk format (with a restricted unpickler) ins
 
 | ID | Specs | Route | Status | Commit |
 |----|-------|-------|--------|--------|
-| T1 | S1, S6 | inline | pending | |
-| T2 | S2, S3 | inline | pending | |
-| T3 | S4 | inline | pending | |
-| T4 | S5, S6 | inline | pending | |
-| T5 | S7, S8 | inline | pending | |
-| T6 | S9, S10 | inline | pending | |
+| T1 | S1, S6 | inline | done | 3235fa1 |
+| T2 | S2, S3 | inline | done | 2076396 |
+| T3 | S4 | inline | done | 0987f08 |
+| T4 | S5, S6 | inline | done | 1c288d4, 1d62c92 |
+| T5 | S7, S8 | inline | done | 8dd7961 |
+| T6 | S9, S10 | inline | done | ac68bf9 |
 
 ## Log
 
 - L1 (2026-11-15): "ahora análiza el repositorio, y recomiendame mejoras y busca huecos lógicos. tambien si se podria mejorar el ui/ux. haz la propuesta." → proposal delivered in 3 phases.
 - L2 (2026-11-15): "procede con las 3 fases"
+- L3 (2026-11-15): T1-T6 implemented on feat/hardening-and-ux. pytest: 33 passed (scratch venv, Python 3.12). RED observed for T1 tests against base. GUI smoke tests (real Tk window, scratch copy) passed for T3, T5, T6.
+- L4 (2026-11-15): T4 (security, item 2): user granted native review, but the reviewer could not run ("Claude Code cannot be launched inside another Claude Code session"). Independent verifier: S5 PASS, S6 PASS, no blockers; advisories A (offline fetch) and C (clone option injection) fixed in 1d62c92.
+- L5 (2026-11-15): Not verified: running against the real game (MapleStory window, TensorFlow model, rune solving). Minimap canvases still have a fixed 400x300 size. Restricted unpickler checked against the one layout in auto-maple-resources.
