@@ -13,7 +13,7 @@ class Update(MenuBarItem):
             name = path.capitalize()
             self.add_command(
                 label=name,
-                command=lambda: UpdatePrompt(self, name, path)
+                command=lambda n=name, p=path: UpdatePrompt(self, n, p)
             )
 
 

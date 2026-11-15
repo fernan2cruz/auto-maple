@@ -125,6 +125,16 @@ def single_match(frame, template):
     return top_left, bottom_right
 
 
+def match_score(frame, template):
+    """Returns the best normalized match score in [-1, 1] of TEMPLATE within FRAME."""
+
+    if template.shape[0] > frame.shape[0] or template.shape[1] > frame.shape[1]:
+        return -1.0
+    gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+    result = cv2.matchTemplate(gray, template, cv2.TM_CCOEFF_NORMED)
+    return float(cv2.minMaxLoc(result)[1])
+
+
 def multi_match(frame, template, threshold=0.95):
     """
     Finds all matches in FRAME that are similar to TEMPLATE by at least THRESHOLD.

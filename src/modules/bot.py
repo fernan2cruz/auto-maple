@@ -72,8 +72,16 @@ class Bot(Configurable):
         """
 
         print('\n[~] Initializing detection algorithm:\n')
-        model = detection.load_model()
-        print('\n[~] Initialized detection algorithm')
+        try:
+            model = detection.load_model()
+            print('\n[~] Initialized detection algorithm')
+        except Exception as e:      # Usually the model folder was not downloaded
+            model = None
+            utils.report_error(
+                'Rune solver disabled: could not load the TensorFlow model from '
+                "'assets/models'. Download it as described in the README. "
+                f'Details: {e.__class__.__name__}: {e}'
+            )
 
         self.ready = True
         config.listener.enabled = True
@@ -118,6 +126,11 @@ class Bot(Configurable):
         :return:        None
         """
 
+        if model is None:
+            print('\n[!] Skipping rune: the rune solver model is not loaded.')
+            self.rune_active = False
+            return
+
         move = self.command_book['move']
         move(*self.rune_pos).execute()
         adjust = self.command_book['adjust']
@@ -158,9 +171,12 @@ class Bot(Configurable):
     def load_commands(self, file):
         try:
             self.command_book = CommandBook(file)
-            config.gui.settings.update_class_bindings()
         except ValueError:
-            pass    # TODO: UI warning popup, say check cmd for errors
+            utils.report_error(f"Command book '{basename(file)}' was not loaded, see console for details.")
+            return False
+        utils.gui_call(config.gui.settings.update_class_bindings)
+        utils.report_info(f"Loaded command book '{self.command_book.name}'.")
+        return True
         #
         # utils.print_separator()
         # print(f"[~] Loading command book '{basename(file)}':")

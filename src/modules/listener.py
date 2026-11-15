@@ -96,16 +96,23 @@ class Listener(Configurable):
         winsound.Beep(784, 200)     # G5
 
     @staticmethod
-    def recalibrate_minimap():
+    def recalibrate_minimap(timeout=10):
+        # Asks the capture thread to recalibrate. Returns False if it did not within TIMEOUT seconds.
         config.capture.calibrated = False
+        deadline = time.time() + timeout
         while not config.capture.calibrated:
+            if time.time() > deadline or not config.capture.thread.is_alive():
+                utils.report_error('Could not recalibrate the minimap. Is the MapleStory window '
+                                   'open with the minimap visible?')
+                return False
             time.sleep(0.01)
-        config.gui.edit.minimap.redraw()
+        utils.gui_call(config.gui.edit.minimap.redraw)
+        return True
 
     @staticmethod
     def record_position():
         pos = tuple('{:.3f}'.format(round(i, 3)) for i in config.player_pos)
         now = datetime.now().strftime('%I:%M:%S %p')
-        config.gui.edit.record.add_entry(now, pos)
+        utils.gui_call(config.gui.edit.record.add_entry, now, pos)
         print(f'\n[~] Recorded position ({pos[0]}, {pos[1]}) at {now}')
         time.sleep(0.6)

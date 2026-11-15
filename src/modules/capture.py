@@ -30,6 +30,9 @@ MM_BR_TEMPLATE = cv2.imread('assets/minimap_br_template.png', 0)
 MMT_HEIGHT = max(MM_TL_TEMPLATE.shape[0], MM_BR_TEMPLATE.shape[0])
 MMT_WIDTH = max(MM_TL_TEMPLATE.shape[1], MM_BR_TEMPLATE.shape[1])
 
+# Minimum normalized match score for the minimap corners to count as found
+MINIMAP_MATCH_THRESHOLD = 0.6
+
 # The player's symbol on the minimap
 PLAYER_TEMPLATE = cv2.imread('assets/player_template.png', 0)
 PT_HEIGHT, PT_WIDTH = PLAYER_TEMPLATE.shape
@@ -74,12 +77,19 @@ class Capture:
         """Constantly monitors the player's position and in-game events."""
 
         mss.windows.CAPTUREBLT = 0
+        warned = None       # Last warning shown, so each problem is reported only once
         while True:
             # Calibrate screen capture
             handle = user32.FindWindowW(None, 'MapleStory')
             rect = wintypes.RECT()
-            user32.GetWindowRect(handle, ctypes.pointer(rect))
+            found = bool(handle) and user32.GetWindowRect(handle, ctypes.pointer(rect))
             rect = (rect.left, rect.top, rect.right, rect.bottom)
+            if not found or rect[2] - rect[0] <= MMT_WIDTH or rect[3] - rect[1] <= MMT_HEIGHT:
+                if warned != 'window':
+                    utils.report_error("MapleStory window not found or minimized. Waiting for it...")
+                    warned = 'window'
+                time.sleep(1)
+                continue
             rect = tuple(max(0, x) for x in rect)
 
             self.window['left'] = rect[0]
@@ -92,6 +102,18 @@ class Capture:
                 self.frame = self.screenshot()
             if self.frame is None:
                 continue
+            tl_score = utils.match_score(self.frame, MM_TL_TEMPLATE)
+            br_score = utils.match_score(self.frame, MM_BR_TEMPLATE)
+            if min(tl_score, br_score) < MINIMAP_MATCH_THRESHOLD:
+                if warned != 'minimap':
+                    utils.report_error('Minimap not found on screen. Open the minimap in game '
+                                       f'(match {min(tl_score, br_score):.2f} < {MINIMAP_MATCH_THRESHOLD}).')
+                    warned = 'minimap'
+                time.sleep(1)
+                continue
+            if warned is not None:
+                utils.report_info('Minimap found, capture calibrated.')
+                warned = None
             tl, _ = utils.single_match(self.frame, MM_TL_TEMPLATE)
             _, br = utils.single_match(self.frame, MM_BR_TEMPLATE)
             mm_tl = (

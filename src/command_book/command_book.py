@@ -43,7 +43,7 @@ class CommandBook(Configurable):
         try:
             module = importlib.import_module(target)
             module = importlib.reload(module)
-        except ImportError:     # Display errors in the target Command Book
+        except Exception:       # Display errors in the target Command Book (syntax, import, runtime)
             print(' !  Errors during compilation:\n')
             for line in traceback.format_exc().split('\n'):
                 line = line.rstrip()
@@ -98,8 +98,9 @@ class CommandBook(Configurable):
         if required_found and (step_found or movement_found):
             self.buff = new_cb['buff']()
             components.step = new_step
-            config.gui.menu.file.enable_routine_state()
-            config.gui.view.status.set_cb(basename(file))
+            if config.gui is not None:
+                utils.gui_call(config.gui.menu.file.enable_routine_state)
+                utils.gui_call(config.gui.view.status.set_cb, basename(file))
             config.routine.clear()
             print(f" ~  Successfully loaded command book '{self.name}'")
             return new_cb, module
