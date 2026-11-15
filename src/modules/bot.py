@@ -1,5 +1,6 @@
 """An interpreter that reads and executes user-created routines."""
 
+import os
 import threading
 import time
 import git
@@ -61,7 +62,7 @@ class Bot(Configurable):
         :return:    None
         """
 
-        self.update_submodules()
+        self.init_submodules()
         print('\n[~] Started main bot loop')
         self.thread.start()
 
@@ -178,42 +179,82 @@ class Bot(Configurable):
         utils.report_info(f"Loaded command book '{self.command_book.name}'.")
         return True
 
+    @staticmethod
+    def read_submodules():
+        """Returns a list of (path, url) tuples declared in .gitmodules."""
+
+        result = []
+        if not os.path.isfile('.gitmodules'):
+            return result
+        with open('.gitmodules', 'r') as file:
+            lines = file.readlines()
+        i = 0
+        while i < len(lines):
+            if lines[i].startswith('[') and i < len(lines) - 2:
+                path = lines[i + 1].split('=')[1].strip()
+                url = lines[i + 2].split('=')[1].strip()
+                result.append((path, url))
+                i += 3
+            else:
+                i += 1
+        return result
+
+    def init_submodules(self):
+        """
+        Downloads submodules that are missing. Existing submodules are never changed on start-up,
+        so local edits are safe and no remote code is pulled without the user asking for it.
+        Use the 'Update' menu to update them.
+        """
+
+        utils.print_separator()
+        print('[~] Checking submodules:')
+        self.submodules = []
+        for path, url in Bot.read_submodules():
+            self.submodules.append(path)
+            if os.path.isdir(path) and os.listdir(path):
+                print(f" -  Found submodule '{path}' (use the Update menu to update it)")
+                continue
+            try:
+                git.Git('.').clone(url, path)
+                print(f" -  Initialized submodule '{path}'")
+            except git.exc.GitCommandError as e:
+                utils.report_error(f"Could not download submodule '{path}': {e}")
+
     def update_submodules(self, force=False):
         """
         Pulls updates from the submodule repositories. If FORCE is True,
-        rebuilds submodules by overwriting all local changes.
+        rebuilds submodules by overwriting all local changes. Otherwise local changes
+        to tracked files are re-applied on top of the update.
         """
 
         utils.print_separator()
         print('[~] Retrieving latest submodules:')
         self.submodules = []
-        repo = git.Repo.init()
-        with open('.gitmodules', 'r') as file:
-            lines = file.readlines()
-            i = 0
-            while i < len(lines):
-                if lines[i].startswith('[') and i < len(lines) - 2:
-                    path = lines[i + 1].split('=')[1].strip()
-                    url = lines[i + 2].split('=')[1].strip()
-                    self.submodules.append(path)
-                    try:
-                        repo.git.clone(url, path)       # First time loading submodule
-                        print(f" -  Initialized submodule '{path}'")
-                    except git.exc.GitCommandError:
-                        sub_repo = git.Repo(path)
-                        if not force:
-                            sub_repo.git.stash()        # Save modified content
-                        sub_repo.git.fetch('origin', 'main')
-                        sub_repo.git.reset('--hard', 'FETCH_HEAD')
-                        if not force:
-                            try:                # Restore modified content
-                                sub_repo.git.checkout('stash', '--', '.')
-                                print(f" -  Updated submodule '{path}', restored local changes")
-                            except git.exc.GitCommandError:
-                                print(f" -  Updated submodule '{path}'")
-                        else:
-                            print(f" -  Rebuilt submodule '{path}'")
-                        sub_repo.git.stash('clear')
-                    i += 3
-                else:
-                    i += 1
+        for path, url in Bot.read_submodules():
+            self.submodules.append(path)
+            if not (os.path.isdir(path) and os.listdir(path)):
+                try:
+                    git.Git('.').clone(url, path)       # First time loading submodule
+                    print(f" -  Initialized submodule '{path}'")
+                except git.exc.GitCommandError as e:
+                    utils.report_error(f"Could not download submodule '{path}': {e}")
+                continue
+
+            sub_repo = git.Repo(path)
+            keep_changes = not force and sub_repo.is_dirty()
+            if keep_changes:
+                sub_repo.git.stash('push', '-m', 'auto-maple update')
+            sub_repo.git.fetch('origin', 'main')
+            sub_repo.git.reset('--hard', 'FETCH_HEAD')
+            if force:
+                print(f" -  Rebuilt submodule '{path}'")
+            elif keep_changes:
+                try:        # Local versions of modified files win over the update
+                    sub_repo.git.checkout('stash@{0}', '--', '.')
+                    sub_repo.git.stash('drop')
+                    print(f" -  Updated submodule '{path}', restored local changes")
+                except git.exc.GitCommandError:
+                    print(f" !  Updated submodule '{path}', but could not restore local changes. "
+                          f"They are kept in 'git stash list' inside '{path}'.")
+            else:
+                print(f" -  Updated submodule '{path}'")

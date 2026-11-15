@@ -1,5 +1,6 @@
 import os
 import pickle
+from src.common import safe_pickle
 
 
 class Configurable:
@@ -19,9 +20,15 @@ class Configurable:
     def load_config(self):
         path = os.path.join(self.DIRECTORY, self.TARGET)
         if os.path.isfile(path):
-            with open(path, 'rb') as file:
-                loaded = pickle.load(file)
-                self.config = {key: loaded.get(key, default) for key, default in self.DEFAULT_CONFIG.items()}
+            try:
+                with open(path, 'rb') as file:
+                    loaded = safe_pickle.load(file)
+                if not isinstance(loaded, dict):
+                    raise pickle.UnpicklingError('expected a dictionary')
+            except Exception as e:      # Corrupted or tampered file: keep the defaults
+                print(f"\n[!] Could not read settings file '{path}', using defaults: {e}")
+                return
+            self.config = {key: loaded.get(key, default) for key, default in self.DEFAULT_CONFIG.items()}
         else:
             self.save_config()
 

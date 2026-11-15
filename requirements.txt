@@ -1,9 +1,12 @@
-GitPython
-keyboard
-mss
-numpy
-opencv-python-headless
-Pillow
-pygame
-pywin32
-tensorflow
+# Use Python 3.10-3.12 on Windows. Ranges keep installs reproducible while allowing patch updates.
+GitPython>=3.1.40,<4
+keyboard==0.13.5
+mss>=9,<11
+numpy>=1.24,<3
+opencv-python-headless>=4.8,<6
+Pillow>=10,<14
+pygame>=2.5,<3
+pywin32>=306
+sv-ttk>=2.6,<3
+# TensorFlow is only needed by the rune solver; the bot runs without it if the model fails to load.
+tensorflow>=2.16,<3

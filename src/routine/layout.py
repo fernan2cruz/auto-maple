@@ -4,7 +4,7 @@ import os
 import cv2
 import math
 import pickle
-from src.common import config, settings, utils
+from src.common import config, settings, utils, safe_pickle
 from os.path import join, isfile, splitext, basename
 from heapq import heappush, heappop
 
@@ -270,8 +270,15 @@ class Layout:
         target = os.path.join(get_layouts_dir(), layout_name)
         if isfile(target):
             print(f" -  Found existing Layout file at '{target}'.")
-            with open(target, 'rb') as file:
-                return pickle.load(file)
+            try:
+                with open(target, 'rb') as file:
+                    layout = safe_pickle.load(file, LAYOUT_PICKLE_CLASSES)
+                if not isinstance(layout, Layout):
+                    raise pickle.UnpicklingError('file does not contain a Layout')
+                return layout
+            except Exception as e:      # Do not overwrite the file, just start from an empty layout
+                utils.report_error(f"Could not read layout '{layout_name}', using an empty one: {e}")
+                return Layout(layout_name)
         else:
             print(f" -  Created new Layout file at '{target}'.")
             new_layout = Layout(layout_name)
@@ -292,6 +299,14 @@ class Layout:
         self.changed = False
         with open(join(layouts_dir, self.name), 'wb') as file:
             pickle.dump(self, file)
+
+
+# Classes a layout pickle may contain. Legacy module paths map to the current classes.
+LAYOUT_PICKLE_CLASSES = {
+    (module, name): cls
+    for module in ('src.routine.layout', 'src.layout', 'layout')
+    for name, cls in (('Layout', Layout), ('Node', Node))
+}
 
 
 def get_layouts_dir():

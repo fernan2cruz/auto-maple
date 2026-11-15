@@ -169,7 +169,7 @@ Auto Maple has the ability to automatically solve "runes", or in-game arrow key 
 
 <ol>
   <li>
-    Download and install <a href="https://www.python.org/downloads/">Python3</a>.
+    Download and install <a href="https://www.python.org/downloads/">Python</a> 3.10, 3.11 or 3.12.
   </li>
   <li>
     Download and install the latest version of <a href="https://developer.nvidia.com/cuda-downloads">CUDA Toolkit</a>.
@@ -181,7 +181,7 @@ Auto Maple has the ability to automatically solve "runes", or in-game arrow key 
     Download and unzip the latest <a href="https://github.com/tanjeffreyz02/auto-maple/releases">Auto Maple release</a>.
   </li>
   <li>
-    Download the <a href="https://drive.google.com/drive/folders/1SPdTNF4KZczoWyWTgfyTBRvLvy7WSGpu?usp=sharing">TensorFlow model</a> and unzip the "models" folder into Auto Maple's "assets" directory.
+    Download the <a href="https://drive.google.com/drive/folders/1SPdTNF4KZczoWyWTgfyTBRvLvy7WSGpu?usp=sharing">TensorFlow model</a> and unzip the "models" folder into Auto Maple's "assets" directory. Without it Auto Maple still runs, but runes are not solved and a warning is shown.
   </li>
   <li>
     Inside Auto Maple's main directory, open a command prompt and run:
@@ -193,3 +193,14 @@ Auto Maple has the ability to automatically solve "runes", or in-game arrow key 
     This shortcut uses absolute paths, so feel free to move it wherever you want. However, if you move Auto Maple's main directory, you will need to run <code>python setup.py</code> again to generate a new shortcut. To keep the command prompt open after Auto Maple closes, run the above command with the <code>--stay</code> flag.
   </li>
 </ol>
+
+<h3>Updating resources</h3>
+
+<p>
+  Command books, routines and layouts live in the <code>resources</code> submodule. It is downloaded on the first launch only. Auto Maple never updates it on start-up, so your local edits are safe: use the <b>Update</b> menu when you want the latest version. "Update" keeps your local changes, while "Rebuild" discards them.
+</p>
+
+<h3>Running the tests</h3>
+
+<pre><code>python -m pip install -r requirements-dev.txt
+python -m pytest tests</code></pre>
