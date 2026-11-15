@@ -28,6 +28,62 @@ def tk_event_to_key(event):
     return keysym
 
 
+def enable_arrow_navigation(listbox):
+    """Lets Up/Down move the selection of LISTBOX and notify its <<ListboxSelect>> handlers."""
+
+    def step(delta):
+        size = listbox.size()
+        if size == 0:
+            return 'break'
+        selects = listbox.curselection()
+        index = selects[0] + delta if selects else 0
+        index = max(0, min(size - 1, index))
+        listbox.selection_clear(0, 'end')
+        listbox.selection_set(index)
+        listbox.activate(index)
+        listbox.see(index)
+        listbox.event_generate('<<ListboxSelect>>')
+        return 'break'
+
+    listbox.bind('<Up>', lambda e: step(-1))
+    listbox.bind('<Down>', lambda e: step(1))
+
+
+class Tooltip:
+    """Shows TEXT in a small popup while the mouse rests on WIDGET."""
+
+    def __init__(self, widget, text, delay=500):
+        self.widget = widget
+        self.text = text
+        self.delay = delay
+        self._job = None
+        self._popup = None
+        widget.bind('<Enter>', self._schedule, add='+')
+        widget.bind('<Leave>', self._hide, add='+')
+        widget.bind('<ButtonPress>', self._hide, add='+')
+
+    def _schedule(self, _):
+        self._hide()
+        self._job = self.widget.after(self.delay, self._show)
+
+    def _show(self):
+        x = self.widget.winfo_rootx() + 10
+        y = self.widget.winfo_rooty() + self.widget.winfo_height() + 4
+        self._popup = tk.Toplevel(self.widget)
+        self._popup.wm_overrideredirect(True)
+        self._popup.wm_geometry(f'+{x}+{y}')
+        tk.Label(self._popup, text=self.text, bg='#333333', fg='#ffffff',
+                 padx=6, pady=3, font=('Segoe UI', 9)).pack()
+
+    def _hide(self, _=None):
+        if self._job is not None:
+            self.widget.after_cancel(self._job)
+            self._job = None
+        if self._popup is not None:
+            self._popup.destroy()
+            self._popup = None
+
+
 class Frame(tk.Frame):
     def __init__(self, parent, **kwargs):
         super().__init__(parent, **kwargs)

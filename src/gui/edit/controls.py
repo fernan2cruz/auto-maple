@@ -1,7 +1,7 @@
 import tkinter as tk
 from tkinter.messagebox import askyesno
 from src.common import config
-from src.gui.interfaces import Frame
+from src.gui.interfaces import Frame, Tooltip
 
 
 class Controls(Frame):
@@ -19,6 +19,11 @@ class Controls(Frame):
 
         self.new = tk.Button(self, text='\U00002795', width=6, command=self.new)
         self.new.grid(row=0, column=3, padx=(5, 0))
+
+        Tooltip(self.up_arrow, 'Move the selected item up')
+        Tooltip(self.down_arrow, 'Move the selected item down')
+        Tooltip(self.delete, 'Delete the selected item')
+        Tooltip(self.new, 'Add a new component or command')
 
     def move(self, direction):
         """

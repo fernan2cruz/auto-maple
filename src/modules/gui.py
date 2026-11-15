@@ -9,8 +9,34 @@ import tkinter as tk
 from tkinter import ttk
 from tkinter.messagebox import askyesnocancel
 from src.common import config, settings
+from src.common.interfaces import Configurable
 from src.gui import Menu, View, Edit, Settings
+from src.gui.interfaces import Tooltip
 from src.gui.menu.file import File
+
+try:
+    import sv_ttk       # Optional modern ttk theme with light and dark variants
+except ImportError:
+    sv_ttk = None
+
+
+# Colors applied to classic Tk widgets (Listbox, Entry, Text, Label) for each theme
+PALETTES = {
+    'light': dict(background='#fafafa', foreground='#1c1c1c', activeBackground='#e5e5e5',
+                  activeForeground='#1c1c1c', selectBackground='#005fb8', selectForeground='#ffffff',
+                  insertBackground='#1c1c1c', highlightColor='#005fb8', disabledForeground='#9e9e9e',
+                  troughColor='#e5e5e5'),
+    'dark': dict(background='#1c1c1c', foreground='#fafafa', activeBackground='#2f2f2f',
+                 activeForeground='#fafafa', selectBackground='#2f60d8', selectForeground='#ffffff',
+                 insertBackground='#fafafa', highlightColor='#57c8ff', disabledForeground='#7a7a7a',
+                 troughColor='#2f2f2f'),
+}
+
+
+class Appearance(Configurable):
+    DEFAULT_CONFIG = {
+        'Dark theme': False
+    }
 
 
 class GUI:
@@ -33,17 +59,25 @@ class GUI:
         icon = tk.PhotoImage(file='assets/icon.png')
         self.root.iconphoto(False, icon)
         self.root.geometry(GUI.RESOLUTIONS['DEFAULT'])
-        self.root.resizable(False, False)
+        self.root.minsize(760, 600)
+        self._auto_size = None          # Last size set automatically; None once the user resizes
         self.root.protocol('WM_DELETE_WINDOW', self.on_close)
 
         # Initialize GUI variables
         self.routine_var = tk.StringVar()
+        self.appearance = Appearance('appearance')
+        self.dark_theme = tk.BooleanVar(value=bool(self.appearance.config['Dark theme']))
 
         # Build the GUI
         self.menu = Menu(self.root)
         self.root.config(menu=self.menu)
+        view_menu = tk.Menu(self.menu, tearoff=0)
+        view_menu.add_checkbutton(label='Dark theme', variable=self.dark_theme,
+                                  command=self._on_theme_toggle)
+        self.menu.add_cascade(label='View', menu=view_menu)
 
         self._build_status_bar()
+        self.apply_theme(self.dark_theme.get())
 
         self.navigation = ttk.Notebook(self.root)
 
@@ -99,11 +133,30 @@ class GUI:
 
         self.toggle_button = ttk.Button(bar, text='Start', width=8, command=self.toggle_bot)
         self.toggle_button.pack(side=tk.LEFT, padx=(4, 12))
+        Tooltip(self.toggle_button, 'Start or stop the bot (same as the Start/stop hotkey)')
 
         self.message_label = tk.Label(bar, text='Ready', anchor=tk.W)
         self.message_label.pack(side=tk.LEFT, fill='x', expand=True)
         self._default_fg = self.message_label.cget('fg')
         self._shown_state = None
+
+    def apply_theme(self, dark):
+        """Applies the light or dark theme to both ttk and classic Tk widgets."""
+
+        name = 'dark' if dark else 'light'
+        if sv_ttk is not None:
+            sv_ttk.set_theme(name, root=self.root)
+        self.root.tk_setPalette(**PALETTES[name])
+        self._default_fg = PALETTES[name]['foreground']
+        if self.message_label.cget('fg') != '#c62828':      # Keep error messages red
+            self.message_label.config(fg=self._default_fg)
+        self._shown_state = None        # Repaint the Running/Stopped indicator
+
+    def _on_theme_toggle(self):
+        dark = self.dark_theme.get()
+        self.apply_theme(dark)
+        self.appearance.config['Dark theme'] = dark
+        self.appearance.save_config()
 
     def show_message(self, message, level='info'):
         """Shows MESSAGE in the status bar. Errors stay visible, info messages fade out."""
@@ -205,11 +258,18 @@ class GUI:
         curr_id = nav.select()
         nav.nametowidget(curr_id).focus()      # Focus the current Tab
         page = nav.tab(curr_id, 'text')
-        if self.root.state() != 'zoomed':
-            if page in GUI.RESOLUTIONS:
-                self.root.geometry(GUI.RESOLUTIONS[page])
-            else:
-                self.root.geometry(GUI.RESOLUTIONS['DEFAULT'])
+        if self.root.state() == 'zoomed':
+            return
+        width, height = map(int, GUI.RESOLUTIONS.get(page, GUI.RESOLUTIONS['DEFAULT']).split('x'))
+        self.root.update_idletasks()
+        current = (self.root.winfo_width(), self.root.winfo_height())
+        if self._auto_size is not None and current != self._auto_size:
+            # The user resized the window: only grow it if the page needs more room
+            width, height = max(width, current[0]), max(height, current[1])
+        if (width, height) != current:
+            self.root.geometry(f'{width}x{height}')
+            self.root.update_idletasks()
+        self._auto_size = (self.root.winfo_width(), self.root.winfo_height())
 
     def start(self):
         """Starts the GUI as well as any scheduled functions."""

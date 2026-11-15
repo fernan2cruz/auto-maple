@@ -1,5 +1,5 @@
 import tkinter as tk
-from src.gui.interfaces import LabelFrame
+from src.gui.interfaces import LabelFrame, enable_arrow_navigation
 from src.common import config
 
 
@@ -15,8 +15,7 @@ class Routine(LabelFrame):
                                   exportselection=False,
                                   activestyle='none',
                                   yscrollcommand=self.scroll.set)
-        self.listbox.bind('<Up>', lambda e: 'break')
-        self.listbox.bind('<Down>', lambda e: 'break')
+        enable_arrow_navigation(self.listbox)
         self.listbox.bind('<Left>', lambda e: 'break')
         self.listbox.bind('<Right>', lambda e: 'break')
         self.listbox.bind('<<ListboxSelect>>', parent.details.show_details)

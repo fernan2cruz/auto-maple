@@ -1,6 +1,6 @@
 import tkinter as tk
 from src.routine.components import Point
-from src.gui.interfaces import LabelFrame
+from src.gui.interfaces import LabelFrame, enable_arrow_navigation
 
 
 class Record(LabelFrame):
@@ -20,8 +20,7 @@ class Record(LabelFrame):
                                   exportselection=False,
                                   activestyle='none',
                                   yscrollcommand=self.scroll.set)
-        self.listbox.bind('<Up>', lambda e: 'break')
-        self.listbox.bind('<Down>', lambda e: 'break')
+        enable_arrow_navigation(self.listbox)
         self.listbox.bind('<Left>', lambda e: 'break')
         self.listbox.bind('<Right>', lambda e: 'break')
         self.listbox.bind('<<ListboxSelect>>', self.on_select)

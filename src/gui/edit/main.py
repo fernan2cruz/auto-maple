@@ -1,8 +1,9 @@
 """Allows the user to edit routines while viewing each Point's location on the minimap."""
 
-from src.common import config
+from src.common import config, utils
 import inspect
 import tkinter as tk
+from tkinter import ttk
 from src.routine.components import Point, Command
 from src.gui.edit.minimap import Minimap
 from src.gui.edit.record import Record
@@ -34,6 +35,25 @@ class Edit(Tab):
         self.editor.grid(row=0, column=2, rowspan=3, sticky=tk.NSEW, padx=10, pady=10)
 
 
+# Arguments edited with a drop-down instead of free text
+ARGUMENT_CHOICES = {
+    'direction': ('left', 'right', 'up', 'down'),
+}
+
+# Arguments that are names, never numbers, even if they look like one
+TEXT_ARGUMENTS = {'label', 'target'}
+
+SEARCH_PLACEHOLDER = 'Search for a component'
+
+
+def _is_number(value):
+    try:
+        float(value)
+        return True
+    except (TypeError, ValueError):
+        return False
+
+
 class Editor(LabelFrame):
     def __init__(self, parent, **kwargs):
         super().__init__(parent, 'Editor', **kwargs)
@@ -56,24 +76,16 @@ class Editor(LabelFrame):
         self.contents = Frame(self)
         self.contents.grid(row=0, column=0, sticky=tk.EW, padx=5)
 
-        title = tk.Entry(self.contents, justify=tk.CENTER)
-        title.pack(expand=True, fill='x', pady=(5, 2))
-        title.insert(0, 'Nothing selected')
-        title.config(state=tk.DISABLED)
+        self.create_title('Nothing selected')
+        self.create_disabled_entry('Select a component or command to edit it, or press ➕ to add one.')
 
-        self.create_disabled_entry()
+    def create_title(self, text):
+        title = ttk.Label(self.contents, text=text, anchor=tk.CENTER, font=('Segoe UI', 10, 'bold'))
+        title.pack(expand=True, fill='x', pady=(5, 4))
 
-    def create_disabled_entry(self):
-        row = Frame(self.contents, highlightthickness=0)
-        row.pack(expand=True, fill='x')
-
-        label = tk.Entry(row)
-        label.pack(side=tk.LEFT, expand=True, fill='x')
-        label.config(state=tk.DISABLED)
-
-        entry = tk.Entry(row)
-        entry.pack(side=tk.RIGHT, expand=True, fill='x')
-        entry.config(state=tk.DISABLED)
+    def create_disabled_entry(self, text='This item has no arguments.'):
+        hint = ttk.Label(self.contents, text=text, anchor=tk.CENTER, wraplength=320)
+        hint.pack(expand=True, fill='x', pady=4)
 
     def create_entry(self, key, value):
         """
@@ -81,18 +93,32 @@ class Editor(LabelFrame):
         of the attribute while VALUE is its currently assigned value.
         """
 
-        self.vars[key] = tk.StringVar(value=str(value))
+        var = tk.StringVar(value=str(value))
+        self.vars[key] = var
 
         row = Frame(self.contents, highlightthickness=0)
-        row.pack(expand=True, fill='x')
+        row.pack(expand=True, fill='x', pady=1)
 
-        label = tk.Entry(row)
-        label.pack(side=tk.LEFT, expand=True, fill='x')
-        label.insert(0, key)
-        label.config(state=tk.DISABLED)
+        label = ttk.Label(row, text=key, width=16, anchor=tk.W)
+        label.pack(side=tk.LEFT)
 
-        entry = tk.Entry(row, textvariable=self.vars[key])
-        entry.pack(side=tk.RIGHT, expand=True, fill='x')
+        text = str(value).strip().lower()
+        if isinstance(value, bool) or text in ('true', 'false'):
+            var.set('True' if text == 'true' else 'False')
+            check = ttk.Checkbutton(row, variable=var, onvalue='True', offvalue='False')
+            check.pack(side=tk.LEFT)
+        elif key in ARGUMENT_CHOICES:
+            combo = ttk.Combobox(row, textvariable=var, values=ARGUMENT_CHOICES[key])
+            combo.pack(side=tk.RIGHT, expand=True, fill='x')
+        else:
+            entry = tk.Entry(row, textvariable=var)
+            entry.pack(side=tk.RIGHT, expand=True, fill='x')
+            if key not in TEXT_ARGUMENTS and (isinstance(value, (int, float)) or _is_number(value)):
+                normal_bg = entry.cget('bg')
+
+                def check_number(*_):
+                    entry.config(bg=normal_bg if _is_number(var.get()) else '#ef9a9a')
+                var.trace_add('write', check_number)
 
     def create_edit_ui(self, arr, i, func):
         """
@@ -108,10 +134,7 @@ class Editor(LabelFrame):
         self.contents = Frame(self)
         self.contents.grid(row=0, column=0, sticky=tk.EW, padx=5)
 
-        title = tk.Entry(self.contents, justify=tk.CENTER)
-        title.pack(expand=True, fill='x', pady=(5, 2))
-        title.insert(0, f"Editing {arr[i].__class__.__name__}")
-        title.config(state=tk.DISABLED)
+        self.create_title(f"Editing {arr[i].__class__.__name__}")
 
         if len(arr[i].kwargs) > 0:
             for key, value in arr[i].kwargs.items():
@@ -129,16 +152,13 @@ class Editor(LabelFrame):
         self.contents = Frame(self)
         self.contents.grid(row=0, column=0, sticky=tk.EW, padx=5)
 
-        title = tk.Entry(self.contents, justify=tk.CENTER)
-        title.pack(expand=True, fill='x', pady=(5, 2))
-        title.insert(0, f"Creating new ...")
-        title.config(state=tk.DISABLED)
+        self.create_title('Creating new ...')
 
         options = config.routine.get_all_components()
         var = tk.StringVar(value=tuple(options.keys()))
 
         def update_search(*_):
-            value = input_var.get().strip().lower()
+            value = '' if placeholder_active[0] else input_var.get().strip().lower()
             if value == '':
                 var.set(tuple(options.keys()))
             else:
@@ -149,11 +169,13 @@ class Editor(LabelFrame):
                 var.set(new_options)
 
         def on_entry_return(e):
+            if placeholder_active[0]:
+                return
             value = e.widget.get().strip().lower()
             if value in options:
                 self.create_add_ui(options[value], sticky=True)
             else:
-                print(f"\n[!] '{value}' is not a valid Component.")
+                utils.report_error(f"'{value}' is not a valid component.")
 
         def on_entry_down(_):
             display.focus()
@@ -176,8 +198,19 @@ class Editor(LabelFrame):
         input_var = tk.StringVar()
         user_input = tk.Entry(self.contents, textvariable=input_var)
         user_input.pack(expand=True, fill='x')
-        user_input.insert(0, 'Search for a component')
-        user_input.bind('<FocusIn>', lambda _: user_input.selection_range(0, 'end'))
+        placeholder_active = [True]
+        normal_fg = user_input.cget('fg')
+        user_input.insert(0, SEARCH_PLACEHOLDER)
+        user_input.config(fg='#9e9e9e')
+
+        def clear_placeholder(e):
+            # Cleared on the first typed character so the field can keep focus on open
+            if placeholder_active[0] and e.keysym not in ('Return', 'Down', 'Up', 'Tab'):
+                placeholder_active[0] = False
+                user_input.delete(0, 'end')
+                user_input.config(fg=normal_fg)
+
+        user_input.bind('<Key>', clear_placeholder)
         user_input.bind('<Return>', on_entry_return)
         user_input.bind('<Down>', on_entry_down)
         input_var.trace('w', update_search)         # Show filtered results in real time
@@ -286,15 +319,14 @@ class Editor(LabelFrame):
                             self.parent.routine.commands.update_display()
                             self.cancel()
                         else:
-                            print(f"\n[!] Error while adding Command: currently selected Component is not a Point.")
+                            utils.report_error('Cannot add the command: the selected component is not a Point.')
                     else:
-                        print(f"\n[!] Error while adding Command: no Point is currently selected.")
+                        utils.report_error('Cannot add the command: select a Point first.')
                 else:
                     config.routine.append_component(obj)
                     self.cancel()
             except (ValueError, TypeError) as e:
-                print(f"\n[!] Found invalid arguments for '{component.__name__}':")
-                print(f"{' ' * 4} -  {e}")
+                utils.report_error(f"Invalid arguments for '{component.__name__}': {e}")
         return f
 
     def update_display(self):

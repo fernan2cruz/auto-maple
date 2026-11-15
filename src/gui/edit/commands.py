@@ -2,7 +2,7 @@ import tkinter as tk
 
 from src.common import config
 from src.routine.components import Point
-from src.gui.interfaces import Frame
+from src.gui.interfaces import Frame, enable_arrow_navigation
 
 
 class Commands(Frame):
@@ -20,8 +20,7 @@ class Commands(Frame):
                                   exportselection=False,
                                   activestyle='none',
                                   yscrollcommand=self.scroll.set)
-        self.listbox.bind('<Up>', lambda e: 'break')
-        self.listbox.bind('<Down>', lambda e: 'break')
+        enable_arrow_navigation(self.listbox)
         self.listbox.bind('<Left>', lambda e: 'break')
         self.listbox.bind('<Right>', lambda e: 'break')
         self.bind_select()
