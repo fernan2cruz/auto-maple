@@ -36,3 +36,35 @@ def test_match_score_with_template_larger_than_frame():
     frame = np.zeros((5, 5, 3), dtype=np.uint8)
     template = np.zeros((10, 10), dtype=np.uint8)
     assert utils.match_score(frame, template) == -1.0
+
+
+def test_start_stop_runs_once_for_simultaneous_requests_and_held_key(monkeypatch):
+    import threading
+    import time
+    import types
+    import src.modules.listener as listener_module
+    from src.common import config
+
+    calls = []
+
+    def slow_toggle():
+        calls.append(1)
+        config.enabled = not config.enabled
+        time.sleep(0.2)
+
+    monkeypatch.setattr(listener_module.Listener, '_toggle_enabled', staticmethod(slow_toggle))
+    threads = [threading.Thread(target=listener_module.Listener.toggle_enabled) for _ in range(5)]
+    [t.start() for t in threads]
+    [t.join() for t in threads]
+    assert len(calls) == 1
+
+    calls.clear()
+    monkeypatch.setattr(listener_module, 'kb', types.SimpleNamespace(is_pressed=lambda k: k == 'insert'))
+    listener = listener_module.Listener.__new__(listener_module.Listener)
+    listener.config = {'Start/stop': 'insert', 'Reload routine': 'f6', 'Record position': 'f7'}
+    listener.enabled, listener.block_time, listener.ready = True, 0, False
+    threading.Thread(target=listener._main, daemon=True).start()
+    time.sleep(1.0)                     # Key held down the whole time
+    listener.enabled = False
+    assert len(calls) == 1
+    config.enabled = False

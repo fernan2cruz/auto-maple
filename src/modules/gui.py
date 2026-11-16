@@ -174,6 +174,10 @@ class GUI:
     def _refresh_state(self):
         """Keeps the Running/Stopped indicator in sync with the bot."""
 
+        from src.modules.listener import Listener
+        if Listener.is_toggling():
+            self.root.after(GUI.STATE_POLL_MS, self._refresh_state)
+            return
         enabled = config.enabled
         if enabled != self._shown_state:
             self._shown_state = enabled
@@ -194,8 +198,12 @@ class GUI:
         if not config.enabled and len(config.routine) == 0:
             self.show_message('The routine is empty. Load or create a routine before starting.', 'error')
             return
-        # Toggling recalibrates the minimap and beeps, which takes a moment: keep the UI responsive
         from src.modules.listener import Listener
+        if Listener.is_toggling():
+            return
+        # Toggling recalibrates the minimap and beeps, which takes a moment: keep the UI responsive
+        self.toggle_button.config(text='...')
+        self._shown_state = None        # Repaint the real state once the toggle finishes
         threading.Thread(target=Listener.toggle_enabled, daemon=True).start()
 
     #################################

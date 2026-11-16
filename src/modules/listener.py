@@ -9,6 +9,9 @@ from src.common import config, utils
 from datetime import datetime
 
 
+_toggle_lock = threading.Lock()        # Only one start/stop can run at a time
+
+
 class Listener(Configurable):
     DEFAULT_CONFIG = {
         'Start/stop': 'insert',
@@ -45,10 +48,18 @@ class Listener(Configurable):
         """
 
         self.ready = True
+        start_was_pressed = False
         while True:
             if self.enabled:
-                if kb.is_pressed(self.config['Start/stop']):
+                # Trigger on the press itself: holding the key (or a lost key-up) must not keep toggling
+                start_pressed = kb.is_pressed(self.config['Start/stop'])
+                if start_pressed and not start_was_pressed:
+                    start_was_pressed = True
                     Listener.toggle_enabled()
+                    continue
+                start_was_pressed = start_pressed
+                if start_pressed:
+                    pass        # Still held after toggling: wait for release
                 elif kb.is_pressed(self.config['Reload routine']):
                     Listener.reload_routine()
                 elif self.restricted_pressed('Record position'):
@@ -68,9 +79,25 @@ class Listener(Configurable):
         return False
 
     @staticmethod
-    def toggle_enabled():
-        """Resumes or pauses the current routine. Plays a sound to notify the user."""
+    def is_toggling():
+        return _toggle_lock.locked()
 
+    @staticmethod
+    def toggle_enabled():
+        """
+        Resumes or pauses the current routine. Plays a sound to notify the user.
+        Ignored if another start/stop is still in progress.
+        """
+
+        if not _toggle_lock.acquire(blocking=False):
+            return
+        try:
+            Listener._toggle_enabled()
+        finally:
+            _toggle_lock.release()
+
+    @staticmethod
+    def _toggle_enabled():
         config.bot.rune_active = False
 
         if not config.enabled and not Listener.recalibrate_minimap():   # Recalibrate only when being enabled
