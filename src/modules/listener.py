@@ -77,6 +77,10 @@ class Listener(Configurable):
             winsound.Beep(523, 333)     # C5: stays stopped
             return
 
+        if not config.enabled and not config.capture.focus_game_window():
+            utils.report_error('Could not bring the MapleStory window to the front. Click the game '
+                               'window so the bot can send keys to it.')
+
         config.enabled = not config.enabled
         utils.print_state()
 

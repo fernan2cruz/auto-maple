@@ -159,6 +159,17 @@ class Capture:
                         self.ready = True
                     time.sleep(0.001)
 
+    @staticmethod
+    def focus_game_window():
+        """Brings the MapleStory window to the front so the bot's key presses reach the game."""
+
+        handle = user32.FindWindowW(None, 'MapleStory')
+        if not handle:
+            return False
+        if user32.IsIconic(handle):
+            user32.ShowWindow(handle, 9)        # SW_RESTORE
+        return bool(user32.SetForegroundWindow(handle))
+
     def screenshot(self, delay=1):
         try:
             return np.array(self.sct.grab(self.window))
